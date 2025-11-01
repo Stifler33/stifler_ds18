@@ -1,0 +1,11 @@
+{
+    "path_devices": "/sys/bus/w1/devices",
+    "devices": {
+        "qq": {
+            "address": "28-03049794240a",
+            "temp_raw": null,
+            "temp_float": null,
+            "temp_str": null
+        }
+    }
+}
