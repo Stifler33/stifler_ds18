@@ -1,8 +1,6 @@
 from pathlib import Path
 import json
 from threading import Thread
-import asyncio
-import time
 
 path_1wire_devices = Path("/sys/bus/w1/devices")
 __path_config = Path("config.json")
@@ -19,7 +17,14 @@ __template_config = {
 
 config = {}
 
-def __get_config():    
+def __get_config():
+    """
+    Проверяет существует ли конфигурационный файл.
+
+    Если его нет создает по шаблону.
+
+    Возвращает словарь с конфигурацией
+    """    
     global __template_config, config
     if __path_config.is_file():        
         with open(__path_config, "r") as file:
@@ -55,7 +60,12 @@ def __update_temps_str(path_device: Path):
     return None
 
 
-def __search_address(address: str):
+def __search_address(address: str) -> bool:
+    """
+    Ищет датчик по адресу в сохраненной конфигурации 
+    Parameters:
+        address: искомый адрес датчика
+    """
     global config
     for name, conf in config['devices'].items():        
         if address in conf['address']:
@@ -109,13 +119,15 @@ def list_devices() -> dict:
                     dict_devices[dir.name.lstrip()] = dir
     return dict_devices
 
-def get_temp(name_sensor: str):
+def get_temp(name_sensor: str, temp_type=float):
     """
     Возвращает температуру в градусах Цельсия
+    Parameters:
+        name_sensor: имя датчика
+        temp_type: тип позвращаемой переменной. По умолчанию float
     """    
-    global config   
-    return config['devices'][name_sensor]['temp_float']
-    # path_device = Path(f"{config['path_devices']}/{config['devices'][name_sensor]["address"]}")    
-    # if path_device.is_dir():        
-    #     temp = __update_temps_float(path_device)        
-    #     return temp
+    global config
+    if temp_type is float:
+        return config['devices'][name_sensor]['temp_float']
+    if temp_type is str:
+        return config['devices'][name_sensor]['temp_str']
