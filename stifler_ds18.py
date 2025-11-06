@@ -127,7 +127,10 @@ def get_temp(name_sensor: str, temp_type=float):
         temp_type: тип позвращаемой переменной. По умолчанию float
     """    
     global config
-    if temp_type is float:
-        return config['devices'][name_sensor]['temp_float']
-    if temp_type is str:
-        return config['devices'][name_sensor]['temp_str']
+    try:
+        if temp_type is float:
+            return config['devices'][name_sensor]['temp_float']
+        if temp_type is str:
+            return config['devices'][name_sensor]['temp_str']
+    except KeyError:
+        return None
