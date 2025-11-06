@@ -1,6 +1,7 @@
 from pathlib import Path
 import json
 from threading import Thread
+import argparse
 
 path_1wire_devices = Path("/sys/bus/w1/devices")
 __path_config = Path("config.json")
@@ -38,13 +39,16 @@ def __get_config():
             return __template_config
         
 def __update_temps_raw(path_device: Path):    
-    if path_device.is_dir():        
-        with open(path_device/"temperature") as file:                                    
-            new_temp = file.read()
-            if new_temp == "":
-                return None
-            return new_temp.split()[0]
-    else:
+    try:
+        if path_device.is_dir():        
+            with open(path_device/"temperature") as file:                                    
+                new_temp = file.read()
+                if new_temp == "":
+                    return None
+                return new_temp.split()[0]
+        else:
+            return None
+    except FileNotFoundError as errorFile:
         return None
 
 def __update_temps_float(path_device: Path):
@@ -83,9 +87,11 @@ def __loop():
             device["temp_str"] = str(device["temp_float"]) if device["temp_raw"] else None        
 
 
-def init_config():
+def init_config(start=True):
     """
     Инициализируем конфигурационный файл для датчиков и присваиваем им имена
+    Parameters:
+        start: если True запускается новый поток в котором обнавляются показания с датчиков. Если False то новый поток не запускается.
     """
     config = __get_config()
     path_devices = Path(config["path_devices"])
@@ -95,14 +101,17 @@ def init_config():
                 address_device = dir.name.lstrip()
                 if "master1" not in address_device and not __search_address(address_device):
                     new_name = input(f"Введите имя для датчика {address_device}: ")
+                    if new_name in config['devices']:
+                        print("Датчик с таким именем уже существует\n")
+                        return
                     config["devices"][new_name] = {"address": address_device,
                                                    "temp_raw": __update_temps_raw(dir),
                                                    "temp_float": __update_temps_float(dir),
                                                    "temp_str": __update_temps_str(dir)}
         with open(__path_config, "w") as file:
             json.dump(config, file, indent=4)
-
-        Thread(target=__loop, daemon=True).start()
+        if start:
+            Thread(target=__loop, daemon=True).start()
 
 def list_devices() -> dict:
     """
@@ -134,3 +143,21 @@ def get_temp(name_sensor: str, temp_type=float):
             return config['devices'][name_sensor]['temp_str']
     except KeyError:
         return None
+
+def run_parser():    
+    parser = argparse.ArgumentParser(description="ds18b20 library")
+    parser.add_argument("-u",
+                        "--update",
+                        action="store_true",
+                        help="Обновить конфигурацию. Добавить новые датчики и присвоить им имена"
+                        )
+    args = parser.parse_args()    
+    if args.update:        
+        init_config(False)
+
+
+if __name__ == "__main__":
+    try:
+        run_parser()
+    except KeyboardInterrupt as key:
+        print("\nexit program\n")
